@@ -7,7 +7,7 @@ import cv2
 from model import *
 from util import *
 
-n_epochs = 500
+n_epochs = 300
 learning_rate_val = 0.0003
 weight_decay_rate =  0.00001
 momentum = 0.9
@@ -15,12 +15,12 @@ batch_size = 15
 lambda_recon = 0.9
 lambda_adv = 0.1
 
-trainset_path = '../data/imagenet_trainset.pickle'
-testset_path  = '../data/imagenet_testset.pickle'
-dataset_path = '/media/storage3/Study/data/imagenet/'
-model_path = '../models/imagenet/'
-result_path= '../results/imagenet/'
-pretrained_model_path = '../models/imagenet/model-0'
+trainset_path = '../data/fingerprint_trainset.pickle'
+testset_path  = '../data/fingerprint_testset.pickle'
+dataset_path = '/data/fingerprintset/'
+model_path = '../models/'
+result_path= '../results/'
+pretrained_model_path = '../models/model'
 
 if not os.path.exists(model_path):
     os.makedirs( model_path )
@@ -30,14 +30,14 @@ if not os.path.exists(result_path):
     os.makedirs( result_path )
 
 if not os.path.exists( trainset_path ) or not os.path.exists( testset_path ):
-    imagenet_images = []
+    images = []
     for dir, _, _, in os.walk(dataset_path):
-        imagenet_images.extend( glob( os.path.join(dir, '*.jpg')))
+        images.extend( glob( os.path.join(dir, '*.jpg')))
 
     imagenet_images = np.hstack(imagenet_images)
 
-    trainset = pd.DataFrame({'image_path':imagenet_images[:int(len(imagenet_images)*0.9)]})
-    testset = pd.DataFrame({'image_path':imagenet_images[int(len(imagenet_images)*0.9):]})
+    trainset = pd.DataFrame({'image_path':images[:int(len(images)*0.9)]})
+    testset = pd.DataFrame({'image_path':images[int(len(images)*0.9):]})
 
     trainset.to_pickle( trainset_path )
     testset.to_pickle( testset_path )
@@ -63,15 +63,8 @@ adversarial_pos = model.build_adversarial(images_hiding, is_train)
 adversarial_neg = model.build_adversarial(reconstruction, is_train, reuse=True)
 adversarial_all = tf.concat(0, [adversarial_pos, adversarial_neg])
 
-# Applying bigger loss for overlapping region
-mask_recon = tf.pad(tf.ones([hiding_size - 2*overlap_size, hiding_size - 2*overlap_size]), [[overlap_size,overlap_size], [overlap_size,overlap_size]])
-mask_recon = tf.reshape(mask_recon, [hiding_size, hiding_size, 1])
-mask_recon = tf.concat(2, [mask_recon]*3)
-mask_overlap = 1 - mask_recon
-
-loss_recon_ori = tf.square( images_hiding - reconstruction )
-loss_recon_center = tf.reduce_mean(tf.sqrt( 1e-5 + tf.reduce_sum(loss_recon_ori * mask_recon, [1,2,3]))) / 10.  # Loss for non-overlapping region
-loss_recon_overlap = tf.reduce_mean(tf.sqrt( 1e-5 + tf.reduce_sum(loss_recon_ori * mask_overlap, [1,2,3]))) # Loss for overlapping region
+loss_recon_ori = tf.square( images - reconstruction )
+loss_recon_center = tf.reduce_mean(tf.sqrt( 1e-5 + tf.reduce_sum(loss_recon_ori, [1,2,3]))) / 10.  # Loss for non-overlapping region
 loss_recon = loss_recon_center + loss_recon_overlap
 
 loss_adv_D = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(adversarial_all, labels_D))
