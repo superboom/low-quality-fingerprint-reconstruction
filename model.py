@@ -129,7 +129,7 @@ class Model():
             debn1 = tf.nn.relu(self.batchnorm(deconv1, is_train, name='debn1'))
             recon = self.new_deconv_layer( debn1, [4,4,3,64], [batch_size,64,64,3], stride=2, name="recon")
 
-        return bn1, bn2, bn3, bn4, bn5, bn6, debn4, debn3, debn2, debn1, recon, tf.nn.tanh(recon)
+        return bn1, bn2, bn3, bn4, bn5, bn6, debn4, debn3, debn2, debn1, recon, tf.nn.sigmoid(recon)
 
     def build_adversarial(self, images, is_train, reuse=None):
         with tf.variable_scope('DIS', reuse=reuse):
